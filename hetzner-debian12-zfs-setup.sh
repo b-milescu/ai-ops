@@ -32,7 +32,6 @@ v_zfs_arc_max_mb=
 v_root_password=
 v_encrypt_rpool=             # 0=false, 1=true
 v_passphrase=
-v_zfs_experimental=
 v_suitable_disks=()
 
 # Constants
@@ -358,14 +357,6 @@ function ask_encryption {
     done
   fi
   set -x
-}
-
-function ask_zfs_experimental {
-  print_step_info_header
-
-  if dialog --defaultno --yesno 'Do you want to use experimental zfs module build?' 30 100; then
-    v_zfs_experimental=1
-  fi
 }
 
 function ask_hostname {
@@ -705,14 +696,8 @@ chroot_execute "apt install --yes man wget curl software-properties-common nano 
 echo "======= installing zfs packages =========="
 chroot_execute 'echo "zfs-dkms zfs-dkms/note-incompatible-licenses note true" | debconf-set-selections'
 
-if [[ $v_zfs_experimental == "1" ]]; then
-  chroot_execute "wget -O - https://terem42.github.io/zfs-debian/apt_pub.gpg | apt-key add -"
-  chroot_execute "add-apt-repository 'deb https://terem42.github.io/zfs-debian/public zfs-debian-experimental main'"
-  chroot_execute "apt update"
-  chroot_execute "apt install -t zfs-debian-experimental --yes zfs-initramfs zfs-dkms zfsutils-linux"
-else
-  chroot_execute "apt install -t bookworm-backports --yes zfs-initramfs zfs-dkms zfsutils-linux"
-fi
+chroot_execute "apt install -t bookworm-backports --yes zfs-initramfs zfs-dkms zfsutils-linux"
+
 chroot_execute 'cat << DKMS > /etc/dkms/zfs.conf
 # override for /usr/src/zfs-*/dkms.conf:
 # always rebuild initrd when zfs module has been changed
@@ -837,11 +822,8 @@ echo "======= update grub =========="
 chroot_execute "update-grub"
 
 echo "======= setting up zed =========="
-if [[ $v_zfs_experimental == "1" ]]; then
-  chroot_execute "zfs set canmount=noauto $v_rpool_name"
-else
-  initial_load_debian_zed_cache
-fi
+
+initial_load_debian_zed_cache
 
 echo "======= setting mountpoints =========="
 chroot_execute "zfs set mountpoint=legacy $v_bpool_name/BOOT/debian"
