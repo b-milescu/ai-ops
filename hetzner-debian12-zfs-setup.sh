@@ -467,13 +467,6 @@ determine_kernel_variant
 
 clear
 
-# Disable service actions during chroot to avoid errors
-cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<EOF
-#!/bin/sh
-exit 101
-EOF
-chmod +x "$c_zfs_mount_dir/usr/sbin/policy-rc.d"
-
 # Set non-interactive front end
 export DEBIAN_FRONTEND=noninteractive
 
@@ -629,6 +622,13 @@ echo "======= preparing the jail for chroot =========="
 for virtual_fs_dir in proc sys dev; do
   mount --rbind "/$virtual_fs_dir" "$c_zfs_mount_dir/$virtual_fs_dir"
 done
+
+# Disable service actions during chroot to avoid errors
+cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<EOF
+#!/bin/sh
+exit 101
+EOF
+chmod +x "$c_zfs_mount_dir/usr/sbin/policy-rc.d"
 
 echo "======= setting apt repos =========="
 cat > "$c_zfs_mount_dir/etc/apt/sources.list" <<CONF
