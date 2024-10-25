@@ -39,8 +39,8 @@ c_deb_packages_repo=https://deb.debian.org/debian
 c_deb_security_repo=https://deb.debian.org/debian-security
 
 c_default_zfs_arc_max_mb=250
-c_default_bpool_tweaks="-o ashift=12 -O compression=lz4"
-c_default_rpool_tweaks="-o ashift=12 -O acltype=posixacl -O compression=zstd-9 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD"
+c_default_bpool_tweaks="-o ashift=12 -o autotrim=on -O compression=lz4"
+c_default_rpool_tweaks="-o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD"
 c_default_hostname=terem
 c_zfs_mount_dir=/mnt
 c_log_dir=$(dirname "$(mktemp)")/zfs-hetzner-vm
@@ -509,7 +509,7 @@ rpool_disks_partitions=()
 bpool_disks_partitions=()
 
 if [[ $v_encrypt_rpool == "1" ]]; then
-  encryption_options=(-O "encryption=aes-256-gcm" -O "keylocation=prompt" -O "keyformat=passphrase")
+  encryption_options=(-O "encryption=on" -O "keylocation=prompt" -O "keyformat=passphrase")
 fi
 
 for selected_disk in "${v_selected_disks[@]}"; do
@@ -528,11 +528,10 @@ fi
 zpool create \
   $v_bpool_tweaks -O canmount=off -O devices=off \
   -o compatibility=grub2 \
-  -o autotrim=on \
+  -o cachefile=/etc/zpool.cache \
   -O normalization=formD \
   -O relatime=on \
   -O acltype=posixacl -O xattr=sa \
-  -o cachefile=/etc/zpool.cache \
   -O mountpoint=/boot -R $c_zfs_mount_dir -f \
   $v_bpool_name $pools_mirror_option "${bpool_disks_partitions[@]}"
 
@@ -757,12 +756,12 @@ if [[ $v_encrypt_rpool == "1" ]]; then
 
   # Convert SSH keys for dropbear use
   cp "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key" "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key_temp"
-  chroot_execute "ssh-keygen -p -i -m pem -N '' -f /etc/ssh/ssh_host_rsa_key_temp"
+  chroot_execute "ssh-keygen -p -m pem -N '' -f /etc/ssh/ssh_host_rsa_key_temp"
   chroot_execute "/usr/lib/dropbear/dropbearconvert openssh dropbear /etc/ssh/ssh_host_rsa_key_temp /etc/dropbear/initramfs/dropbear_rsa_host_key"
   rm -rf "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key_temp"
 
   cp "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key" "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key_temp"
-  chroot_execute "ssh-keygen -p -i -m pem -N '' -f /etc/ssh/ssh_host_ecdsa_key_temp"
+  chroot_execute "ssh-keygen -p -m pem -N '' -f /etc/ssh/ssh_host_ecdsa_key_temp"
   chroot_execute "/usr/lib/dropbear/dropbearconvert openssh dropbear /etc/ssh/ssh_host_ecdsa_key_temp /etc/dropbear/initramfs/dropbear_ecdsa_host_key"
   chroot_execute "rm -rf /etc/ssh/ssh_host_ecdsa_key_temp"
   rm -rf "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key_temp"
