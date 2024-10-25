@@ -459,8 +459,6 @@ ask_encryption
 
 ask_zfs_arc_max_size
 
-ask_zfs_experimental
-
 ask_root_password
 
 ask_hostname
