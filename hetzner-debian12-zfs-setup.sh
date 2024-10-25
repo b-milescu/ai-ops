@@ -641,13 +641,9 @@ deb $c_deb_packages_repo bookworm main contrib non-free non-free-firmware
 deb $c_deb_packages_repo bookworm-updates main contrib non-free non-free-firmware
 deb $c_deb_security_repo bookworm-security main contrib non-free non-free-firmware
 deb $c_deb_packages_repo bookworm-backports main contrib non-free non-free-firmware
-deb [arch=amd64] http://download.proxmox.com/debian/pve bookworm pve-no-subscription
 CONF
 
-# Add Proxmox repo key
-chroot_execute "wget https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg"
-
-chroot_execute "apt update && apt full-upgrade --yes"
+chroot_execute "apt update"
 
 echo "======= setting locale, console and language =========="
 chroot_execute "apt install --yes -qq locales debconf-i18n apt-utils"
@@ -756,7 +752,6 @@ for ((i = 1; i < ${#v_selected_disks[@]}; i++)); do
   dd if="${v_selected_disks[0]}-part1" of="${v_selected_disks[i]}-part1"
 done
 
-
 echo "============setup root prompt============"
 cat > "$c_zfs_mount_dir/root/.bashrc" <<CONF
 export PS1='\[\033[01;31m\]\u\[\033[01;33m\]@\[\033[01;32m\]\h \[\033[01;33m\]\w \[\033[01;35m\]\$ \[\033[00m\]'
@@ -773,11 +768,14 @@ echo "========running packages upgrade and autoremove==========="
 chroot_execute "apt upgrade --yes"
 chroot_execute "apt purge cryptsetup* --yes"
 
-echo "========installing Proxmox ========="
-chroot_execute "apt install --yes proxmox-default-kernel"
-chroot_execute "apt install --yes proxmox-ve postfix open-iscsi chrony"
-chroot_execute "apt remove --yes linux-image-amd64 'linux-image-6.1*'"
-chroot_execute "apt remove --yes os-prober"
+# echo "========installing Proxmox ========="
+# echo "deb [arch=amd64] http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > $c_zfs_mount_dir/etc/apt/sources.list.d/pve-install-repo.list
+# chroot_execute "wget https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg"
+# chroot_execute "apt update && apt full-upgrade --yes"
+# chroot_execute "apt install --yes proxmox-default-kernel"
+# chroot_execute "apt install --yes proxmox-ve postfix open-iscsi chrony"
+# chroot_execute "apt remove --yes linux-image-amd64 'linux-image-6.1*'"
+# chroot_execute "apt remove --yes os-prober"
 
 echo "===========add static route to initramfs via hook to add default routes for Hetzner due to Debian/Ubuntu initramfs DHCP bug ========="
 mkdir -p "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount"
