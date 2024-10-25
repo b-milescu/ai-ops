@@ -591,8 +591,10 @@ echo "======= setting up the network =========="
 
 echo "$v_hostname" > $c_zfs_mount_dir/etc/hostname
 
+public_ip_address=$(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+
 cat > "$c_zfs_mount_dir/etc/hosts" <<CONF
-127.0.1.1 ${v_hostname}
+${public_ip_address} ${v_hostname}
 127.0.0.1 localhost
 
 # The following lines are desirable for IPv6 capable hosts
@@ -639,9 +641,13 @@ deb $c_deb_packages_repo bookworm main contrib non-free non-free-firmware
 deb $c_deb_packages_repo bookworm-updates main contrib non-free non-free-firmware
 deb $c_deb_security_repo bookworm-security main contrib non-free non-free-firmware
 deb $c_deb_packages_repo bookworm-backports main contrib non-free non-free-firmware
+deb [arch=amd64] http://download.proxmox.com/debian/pve bookworm pve-no-subscription
 CONF
 
-chroot_execute "apt update"
+# Add Proxmox repo key
+chroot_execute "wget https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg"
+
+chroot_execute "apt update && apt full-upgrade --yes"
 
 echo "======= setting locale, console and language =========="
 chroot_execute "apt install --yes -qq locales debconf-i18n apt-utils"
@@ -767,6 +773,12 @@ echo "========running packages upgrade and autoremove==========="
 chroot_execute "apt upgrade --yes"
 chroot_execute "apt purge cryptsetup* --yes"
 
+echo "========installing Proxmox ========="
+chroot_execute "apt install --yes proxmox-default-kernel"
+chroot_execute "apt install --yes proxmox-ve postfix open-iscsi chrony"
+chroot_execute "apt remove --yes linux-image-amd64 'linux-image-6.1*'"
+chroot_execute "apt remove --yes os-prober"
+
 echo "===========add static route to initramfs via hook to add default routes for Hetzner due to Debian/Ubuntu initramfs DHCP bug ========="
 mkdir -p "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount"
 cat > "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount/static-route" <<'CONF'
@@ -800,7 +812,9 @@ chmod 755 "$c_zfs_mount_dir/etc/network/interfaces"
 echo "======= update initramfs =========="
 chroot_execute "update-initramfs -u -k all"
 
-chroot_execute "apt remove cryptsetup* --yes"
+chroot_execute "apt remove  --yes cryptsetup*"
+
+chroot_execute "apt autoremove --yes"
 
 echo "======= update grub =========="
 chroot_execute "update-grub"
