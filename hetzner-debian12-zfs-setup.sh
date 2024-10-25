@@ -477,7 +477,7 @@ for kver in $(find /lib/modules/* -maxdepth 0 -type d | grep -v "$(uname -r)" | 
 done
 
 echo "======= installing zfs on rescue system =========="
-apt install --yes build-essential autoconf libtool gawk alien fakeroot linux-headers-$(uname -r) zlib1g-dev uuid-dev libblkid-dev libselinux-dev parted lsscsi
+apt install --yes build-essential autoconf libtool gawk alien fakeroot linux-headers-$(uname -r) zlib1g-dev uuid-dev libblkid-dev libselinux-dev parted lsscsi libssl-dev
 wget https://github.com/openzfs/zfs/releases/download/zfs-2.2.6/zfs-2.2.6.tar.gz -O /tmp/zfs.tar.gz
 cd /tmp && tar -xzf zfs.tar.gz && cd zfs-2.2.6
 ./configure && make -s -j$(nproc) && make install
