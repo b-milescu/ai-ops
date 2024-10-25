@@ -107,8 +107,7 @@ function display_intro_banner {
   local dialog_message='Hello!
 This script will prepare the ZFS pools, then install and configure minimal Debian 12 with ZFS root on Hetzner hosting VPS instance
 The script with minimal changes may be used on any other hosting provider supporting KVM virtualization and offering Debian-based rescue system.
-In order to stop the procedure, hit Esc twice during dialogs (excluding yes/no ones), or Ctrl+C while any operation is running.
-'
+In order to stop the procedure, hit Esc twice during dialogs (excluding yes/no ones), or Ctrl+C while any operation is running.'
   dialog --msgbox "$dialog_message" 30 100
 }
 
@@ -210,8 +209,7 @@ LOG
 
   if [[ ${#v_suitable_disks[@]} -eq 0 ]]; then
     local dialog_message='No suitable disks have been found!
-
-If you think this is a bug, please open an issue on https://github.com/terem42/zfs-hetzner-vm/issues, and attach the file `'$c_disks_log'`.'
+`'$c_disks_log'`.'
     dialog --msgbox "$dialog_message" 30 100
 
     exit 1
@@ -237,7 +235,7 @@ function select_disks {
       menu_entries_option+=("$disk_id" "($block_device_basename)" "$disk_selection_status")
     done
 
-    local dialog_message="Select the ZFS devices (multiple selections can be in mirror or strip).\n\nDevices with mounted partitions, cdroms, and removable devices are not displayed!"
+    local dialog_message="Select the ZFS devices (multiple selections can be in mirror or strip).\n\nDevices with mounted partitions, cd-roms, and removable devices are not displayed!"
     mapfile -t v_selected_disks < <(dialog --separate-output --checklist "$dialog_message" 30 100 $((${#menu_entries_option[@]} / 3)) "${menu_entries_option[@]}" 3>&1 1>&2 2>&3)
 
     if [[ ${#v_selected_disks[@]} -gt 0 ]]; then
@@ -479,6 +477,16 @@ ask_hostname
 determine_kernel_variant
 
 clear
+
+# Disable service actions during chroot to avoid errors
+cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<EOF
+#!/bin/sh
+exit 101
+EOF
+chmod +x "$c_zfs_mount_dir/usr/sbin/policy-rc.d"
+
+# Set non-interactive front end
+export DEBIAN_FRONTEND=noninteractive
 
 echo "===========remove unused kernels in rescue system========="
 for kver in $(find /lib/modules/* -maxdepth 0 -type d | grep -v "$(uname -r)" | cut -s -d "/" -f 4); do
