@@ -628,7 +628,7 @@ for virtual_fs_dir in proc sys dev; do
   mount --rbind "/$virtual_fs_dir" "$c_zfs_mount_dir/$virtual_fs_dir"
 done
 
-# Disable service actions during chroot to avoid errors
+echo "======= disable service actions during chroot ======="
 cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<CONF
 #!/bin/sh
 exit 101
