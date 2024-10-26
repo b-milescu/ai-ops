@@ -758,7 +758,7 @@ if [[ $v_encrypt_rpool == "1" ]]; then
   cp /root/.ssh/authorized_keys "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
   chmod 600 "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
   chroot_execute "apt install --yes dropbear-initramfs"
-  echo 'DROPBEAR_OPTIONS="-I 30 -p 10022 -j -k -c -s zfsunlock"'>"$c_zfs_mount_dir/etc/dropbear/initramfs/dropbear.conf"
+  echo 'DROPBEAR_OPTIONS="-p 10022 -j -k -c zfsunlock"'>"$c_zfs_mount_dir/etc/dropbear/initramfs/dropbear.conf"
 fi
 
 echo "======= setup root prompt ======="
