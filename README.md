@@ -19,7 +19,7 @@ This repository contains two scripts:
    - Click "Activate rescue system"
 2. SSH into the console after reboot and run the script:
    ```bash
-   ./hetzner-debian12-zfs-setup.sh
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/b-milescu/ai-ops/refs/heads/main/hetzner-debian12-zfs-setup.sh)"
    ```
 3. Follow prompts to configure:
    - Hostname
@@ -36,16 +36,20 @@ This repository contains two scripts:
    ```
 
 ### 2. Proxmox VE Install on Debian 12
-**Script:** `proxmox_install.sh`  
-**Description:** This script installs Proxmox VE on Debian 12, adding Proxmox repositories, installing necessary packages, and configuring the environment.
+**Scripts:** `proxmox_install_part1.sh` and `proxmox_install_part2.sh`
+**Description:** The will install installs Proxmox VE on Debian 12, adding Proxmox repositories, installing necessary packages, and configuring the environment.
 
 #### Steps to Use:
 1. SSH into your Debian 12 server.
-2. Run the script:
+2. Run the first script:
    ```bash
-   ./proxmox_install.sh
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/b-milescu/ai-ops/refs/heads/main/proxmox_install_part1.sh)"
    ```
-3. The script will:
+   After reboot run the second script:
+   ```bash
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/b-milescu/ai-ops/refs/heads/main/proxmox_install_part2.sh)"
+   ```
+3. The scripts will:
    - Add Proxmox repository and update the system.
    - Install the Proxmox kernel and required packages (Proxmox VE, Postfix, Open-iSCSI, and Chrony).
    - Reboot automatically after major installation steps.
