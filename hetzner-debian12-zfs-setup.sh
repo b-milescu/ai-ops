@@ -591,8 +591,10 @@ echo "======= setting up the network =========="
 
 echo "$v_hostname" > $c_zfs_mount_dir/etc/hostname
 
+public_ip_address=$(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+
 cat > "$c_zfs_mount_dir/etc/hosts" <<CONF
-127.0.1.1 ${v_hostname}
+${public_ip_address} ${v_hostname}
 127.0.0.1 localhost
 
 # The following lines are desirable for IPv6 capable hosts
@@ -602,6 +604,10 @@ ff00::0 ip6-mcastprefix
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 ff02::3 ip6-allhosts
+CONF
+
+cat > "$c_zfs_mount_dir/etc/resolv.conf" <<CONF
+nameserver 1.1.1.1
 CONF
 
 ip6addr_prefix=$(ip -6 a s | grep -E "inet6.+global" | sed -nE 's/.+inet6\s(([0-9a-z]{1,4}:){4,4}).+/\1/p' | head -n 1)
@@ -746,30 +752,6 @@ for ((i = 1; i < ${#v_selected_disks[@]}; i++)); do
   dd if="${v_selected_disks[0]}-part1" of="${v_selected_disks[i]}-part1"
 done
 
-if [[ $v_encrypt_rpool == "1" ]]; then
-  echo "=========set up dropbear=============="
-  chroot_execute "apt install --yes dropbear-initramfs"
-  mkdir -p "$c_zfs_mount_dir/etc/dropbear/initramfs"
-  cp /root/.ssh/authorized_keys "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
-  chmod 600 "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
-  chroot_execute "chown root:root /etc/dropbear/initramfs/authorized_keys"
-
-  # Convert SSH keys for dropbear use
-  cp "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key" "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key_temp"
-  chroot_execute "ssh-keygen -p -m pem -N '' -f /etc/ssh/ssh_host_rsa_key_temp"
-  chroot_execute "/usr/lib/dropbear/dropbearconvert openssh dropbear /etc/ssh/ssh_host_rsa_key_temp /etc/dropbear/initramfs/dropbear_rsa_host_key"
-  rm -rf "$c_zfs_mount_dir/etc/ssh/ssh_host_rsa_key_temp"
-
-  cp "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key" "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key_temp"
-  chroot_execute "ssh-keygen -p -m pem -N '' -f /etc/ssh/ssh_host_ecdsa_key_temp"
-  chroot_execute "/usr/lib/dropbear/dropbearconvert openssh dropbear /etc/ssh/ssh_host_ecdsa_key_temp /etc/dropbear/initramfs/dropbear_ecdsa_host_key"
-  chroot_execute "rm -rf /etc/ssh/ssh_host_ecdsa_key_temp"
-  rm -rf "$c_zfs_mount_dir/etc/ssh/ssh_host_ecdsa_key_temp"
-
-  rm -rf "$c_zfs_mount_dir/etc/dropbear/initramfs/dropbear_dss_host_key"
-fi
-
-
 echo "============setup root prompt============"
 cat > "$c_zfs_mount_dir/root/.bashrc" <<CONF
 export PS1='\[\033[01;31m\]\u\[\033[01;33m\]@\[\033[01;32m\]\h \[\033[01;33m\]\w \[\033[01;35m\]\$ \[\033[00m\]'
@@ -819,7 +801,9 @@ chmod 755 "$c_zfs_mount_dir/etc/network/interfaces"
 echo "======= update initramfs =========="
 chroot_execute "update-initramfs -u -k all"
 
-chroot_execute "apt remove cryptsetup* --yes"
+chroot_execute "apt remove  --yes cryptsetup*"
+
+chroot_execute "apt autoremove --yes"
 
 echo "======= update grub =========="
 chroot_execute "update-grub"
