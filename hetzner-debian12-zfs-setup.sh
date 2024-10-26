@@ -768,15 +768,6 @@ echo "========running packages upgrade and autoremove==========="
 chroot_execute "apt upgrade --yes"
 chroot_execute "apt purge cryptsetup* --yes"
 
-# echo "========installing Proxmox ========="
-# echo "deb [arch=amd64] http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > $c_zfs_mount_dir/etc/apt/sources.list.d/pve-install-repo.list
-# chroot_execute "wget https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg"
-# chroot_execute "apt update && apt full-upgrade --yes"
-# chroot_execute "apt install --yes proxmox-default-kernel"
-# chroot_execute "apt install --yes proxmox-ve postfix open-iscsi chrony"
-# chroot_execute "apt remove --yes linux-image-amd64 'linux-image-6.1*'"
-# chroot_execute "apt remove --yes os-prober"
-
 echo "===========add static route to initramfs via hook to add default routes for Hetzner due to Debian/Ubuntu initramfs DHCP bug ========="
 mkdir -p "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount"
 cat > "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount/static-route" <<'CONF'
