@@ -41,7 +41,7 @@ c_deb_security_repo=https://deb.debian.org/debian-security
 c_default_zfs_arc_max_mb=250
 c_default_bpool_tweaks="-o ashift=12 -o autotrim=on -O compression=lz4"
 c_default_rpool_tweaks="-o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD"
-c_default_hostname=terem
+c_default_hostname=proxmox
 c_zfs_mount_dir=/mnt
 c_log_dir=$(dirname "$(mktemp)")/zfs-hetzner-vm
 c_install_log=$c_log_dir/install.log
@@ -415,7 +415,7 @@ function unmount_and_export_fs {
 
   SECONDS=0
   zpools_exported=99
-  echo "===========exporting zfs pools============="
+  echo "======= exporting zfs pools ======="
   set +e
   while (( zpools_exported == 99 )) && (( SECONDS++ <= 60 )); do    
     if zpool export -a 2> /dev/null; then
@@ -470,13 +470,13 @@ clear
 # Set non-interactive front end
 export DEBIAN_FRONTEND=noninteractive
 
-echo "===========remove unused kernels in rescue system========="
+echo "======= remove unused kernels in rescue system ======="
 for kver in $(find /lib/modules/* -maxdepth 0 -type d | grep -v "$(uname -r)" | cut -s -d "/" -f 4); do
   apt purge --yes "linux-headers-$kver"
   apt purge --yes "linux-image-$kver"
 done
 
-echo "======= installing zfs on rescue system =========="
+echo "======= installing zfs on rescue system ======="
 apt install --yes build-essential autoconf libtool gawk alien fakeroot linux-headers-$(uname -r) zlib1g-dev uuid-dev libblkid-dev libselinux-dev parted lsscsi libssl-dev
 wget https://github.com/openzfs/zfs/releases/download/zfs-2.2.6/zfs-2.2.6.tar.gz -O /tmp/zfs.tar.gz
 cd /tmp && tar -xzf zfs.tar.gz && cd zfs-2.2.6
@@ -487,7 +487,7 @@ modprobe zfs
 export PATH=$PATH:/usr/sbin
 zfs --version
 
-echo "======= partitioning the disk =========="
+echo "======= partitioning the disk ======="
 
 if [[ $v_free_tail_space -eq 0 ]]; then
   tail_space_parameter=0
@@ -503,7 +503,7 @@ for selected_disk in "${v_selected_disks[@]}"; do
   udevadm settle
 done
 
-echo "======= create zfs pools and datasets =========="
+echo "======= create zfs pools and datasets ======="
 
 rpool_disks_partitions=()
 bpool_disks_partitions=()
@@ -582,12 +582,12 @@ if [[ $v_swap_size -gt 0 ]]; then
   mkswap -f "/dev/zvol/$v_rpool_name/swap"
 fi
 
-echo "======= setting up initial system packages =========="
+echo "======= setting up initial system packages ======="
 debootstrap --arch=amd64 bookworm "$c_zfs_mount_dir" "$c_deb_packages_repo"
 
 zfs set devices=off "$v_rpool_name"
 
-echo "======= setting up the network =========="
+echo "======= setting up the network ======="
 
 echo "$v_hostname" > $c_zfs_mount_dir/etc/hostname
 
@@ -623,19 +623,19 @@ Gateway=fe80::1
 CONF
 chroot_execute "systemctl enable systemd-networkd.service"
 
-echo "======= preparing the jail for chroot =========="
+echo "======= preparing the jail for chroot ======="
 for virtual_fs_dir in proc sys dev; do
   mount --rbind "/$virtual_fs_dir" "$c_zfs_mount_dir/$virtual_fs_dir"
 done
 
 # Disable service actions during chroot to avoid errors
-cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<EOF
+cat > "$c_zfs_mount_dir/usr/sbin/policy-rc.d" <<CONF
 #!/bin/sh
 exit 101
-EOF
+CONF
 chmod +x "$c_zfs_mount_dir/usr/sbin/policy-rc.d"
 
-echo "======= setting apt repos =========="
+echo "======= setting apt repos ======="
 cat > "$c_zfs_mount_dir/etc/apt/sources.list" <<CONF
 deb $c_deb_packages_repo bookworm main contrib non-free non-free-firmware
 deb $c_deb_packages_repo bookworm-updates main contrib non-free non-free-firmware
@@ -645,7 +645,7 @@ CONF
 
 chroot_execute "apt update"
 
-echo "======= setting locale, console and language =========="
+echo "======= setting locale, console and language ======="
 chroot_execute "apt install --yes -qq locales debconf-i18n apt-utils"
 sed -i 's/# en_US.UTF-8/en_US.UTF-8/' "$c_zfs_mount_dir/etc/locale.gen"
 sed -i 's/# fr_FR.UTF-8/fr_FR.UTF-8/' "$c_zfs_mount_dir/etc/locale.gen"
@@ -696,13 +696,13 @@ chroot_execute "setupcon"
 chroot_execute "rm -f /etc/localtime /etc/timezone"
 chroot_execute "dpkg-reconfigure tzdata -f noninteractive"
 
-echo "======= installing latest kernel============="
+echo "======= installing latest kernel ======="
 chroot_execute "apt install --yes linux-image${v_kernel_variant}-amd64 linux-headers${v_kernel_variant}-amd64 dpkg-dev"
 
-echo "======= installing aux packages =========="
+echo "======= installing aux packages ======="
 chroot_execute "apt install --yes man wget curl software-properties-common nano htop gnupg"
 
-echo "======= installing zfs packages =========="
+echo "======= installing zfs packages ======="
 chroot_execute 'echo "zfs-dkms zfs-dkms/note-incompatible-licenses note true" | debconf-set-selections'
 
 chroot_execute "apt install -t bookworm-backports --yes zfs-initramfs zfs-dkms zfsutils-linux"
@@ -714,25 +714,25 @@ chroot_execute 'cat << DKMS > /etc/dkms/zfs.conf
 REMAKE_INITRD="yes"
 DKMS'
 
-echo "======= installing OpenSSH and network tooling =========="
+echo "======= installing OpenSSH and network tooling ======="
 chroot_execute "apt install --yes openssh-server net-tools"
 
-echo "======= setup OpenSSH  =========="
+echo "======= setup OpenSSH ======="
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/g' "$c_zfs_mount_dir/etc/ssh/sshd_config"
 sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/g' "$c_zfs_mount_dir/etc/ssh/sshd_config"
 chroot_execute "rm /etc/ssh/ssh_host_*"
 chroot_execute "dpkg-reconfigure openssh-server -f noninteractive"
 
-echo "======= set root password =========="
+echo "======= set root password ======="
 chroot_execute "echo root:$(printf "%q" "$v_root_password") | chpasswd"
 
-echo "======= setting up zfs cache =========="
+echo "======= setting up zfs cache ======="
 cp /etc/zpool.cache "$c_zfs_mount_dir/etc/zfs/zpool.cache"
 
-echo "========setting up zfs module parameters========"
+echo "======= setting up zfs module parameters ======="
 chroot_execute "echo options zfs zfs_arc_max=$((v_zfs_arc_max_mb * 1024 * 1024)) >> /etc/modprobe.d/zfs.conf"
 
-echo "======= setting up grub =========="
+echo "======= setting up grub ======="
 chroot_execute "echo 'grub-pc grub-pc/install_devices_empty   boolean true' | debconf-set-selections"
 chroot_execute "DEBIAN_FRONTEND=noninteractive apt install --yes grub-legacy"
 chroot_execute "DEBIAN_FRONTEND=noninteractive apt install --yes grub-pc"
@@ -752,7 +752,16 @@ for ((i = 1; i < ${#v_selected_disks[@]}; i++)); do
   dd if="${v_selected_disks[0]}-part1" of="${v_selected_disks[i]}-part1"
 done
 
-echo "============setup root prompt============"
+if [[ $v_encrypt_rpool == "1" ]]; then
+  echo "======= set up dropbear ======="
+  mkdir -p "$c_zfs_mount_dir/etc/dropbear/initramfs"
+  cp /root/.ssh/authorized_keys "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
+  chmod 600 "$c_zfs_mount_dir/etc/dropbear/initramfs/authorized_keys"
+  chroot_execute "apt install --yes dropbear-initramfs"
+  echo 'DROPBEAR_OPTIONS="-I 30 -p 10022 -j -k -c -s zfsunlock"'>"$c_zfs_mount_dir/etc/dropbear/initramfs/dropbear.conf"
+fi
+
+echo "======= setup root prompt ======="
 cat > "$c_zfs_mount_dir/root/.bashrc" <<CONF
 export PS1='\[\033[01;31m\]\u\[\033[01;33m\]@\[\033[01;32m\]\h \[\033[01;33m\]\w \[\033[01;35m\]\$ \[\033[00m\]'
 umask 022
@@ -760,59 +769,26 @@ export LS_OPTIONS='--color=auto -h'
 eval "\$(dircolors)"
 CONF
 
-echo "========= add root pubkey for login via SSH"
+echo "======= add root pubkey for login via SSH"
 mkdir -p "$c_zfs_mount_dir/root/.ssh/"
 cp /root/.ssh/authorized_keys "$c_zfs_mount_dir/root/.ssh/authorized_keys"
 
-echo "========running packages upgrade and autoremove==========="
+echo "======= running packages upgrade and autoremove ======="
 chroot_execute "apt upgrade --yes"
 chroot_execute "apt purge cryptsetup* --yes"
-
-echo "===========add static route to initramfs via hook to add default routes for Hetzner due to Debian/Ubuntu initramfs DHCP bug ========="
-mkdir -p "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount"
-cat > "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount/static-route" <<'CONF'
-#!/bin/sh
-PREREQ=""
-prereqs()
-{
-    echo "$PREREQ"
-}
-
-case $1 in
-prereqs)
-    prereqs
-    exit 0
-    ;;
-esac
-
-. /scripts/functions
-# Begin real processing below this line
-
-configure_networking
-
-ip route add 172.31.1.1/255.255.255.255 dev eth0
-ip route add default via 172.31.1.1 dev eth0
-CONF
-
-chmod 755 "$c_zfs_mount_dir/usr/share/initramfs-tools/scripts/init-premount/static-route"
-
-chmod 755 "$c_zfs_mount_dir/etc/network/interfaces"
-
-echo "======= update initramfs =========="
-chroot_execute "update-initramfs -u -k all"
-
-chroot_execute "apt remove  --yes cryptsetup*"
-
 chroot_execute "apt autoremove --yes"
 
-echo "======= update grub =========="
+echo "======= update initramfs ======="
+chroot_execute "update-initramfs -u -k all"
+
+echo "======= update grub ======="
 chroot_execute "update-grub"
 
-echo "======= setting up zed =========="
+echo "======= setting up zed ======="
 
 initial_load_debian_zed_cache
 
-echo "======= setting mountpoints =========="
+echo "======= setting mountpoints ======="
 chroot_execute "zfs set mountpoint=legacy $v_bpool_name/BOOT/debian"
 chroot_execute "echo $v_bpool_name/BOOT/debian /boot zfs nodev,relatime,x-systemd.requires=zfs-mount.service,x-systemd.device-timeout=10 0 0 > /etc/fstab"
 
@@ -825,15 +801,15 @@ chroot_execute "echo $v_rpool_name/var/tmp /var/tmp zfs nodev,relatime 0 0 >> /e
 chroot_execute "zfs set mountpoint=legacy $v_rpool_name/tmp"
 chroot_execute "echo $v_rpool_name/tmp /tmp zfs nodev,relatime 0 0 >> /etc/fstab"
 
-echo "========= add swap, if defined"
+echo "======= add swap, if defined ======="
 if [[ $v_swap_size -gt 0 ]]; then
   chroot_execute "echo /dev/zvol/$v_rpool_name/swap none swap discard 0 0 >> /etc/fstab"
 fi
 
 chroot_execute "echo RESUME=none > /etc/initramfs-tools/conf.d/resume"
 
-echo "======= unmounting filesystems and zfs pools =========="
+echo "======= unmounting filesystems and zfs pools ======="
 unmount_and_export_fs
 
-echo "======== setup complete, rebooting ==============="
+echo "======= setup complete, rebooting" ======="
 reboot
