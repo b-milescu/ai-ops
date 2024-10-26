@@ -811,5 +811,5 @@ chroot_execute "echo RESUME=none > /etc/initramfs-tools/conf.d/resume"
 echo "======= unmounting filesystems and zfs pools ======="
 unmount_and_export_fs
 
-echo "======= setup complete, rebooting" ======="
+echo "======= setup complete, rebooting ======="
 reboot
