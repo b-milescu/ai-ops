@@ -14,9 +14,9 @@ This repository contains two scripts:
 
 #### Steps to Use:
 1. In the Hetzner rescue system:
-   - Set the OS to `linux64`.
+   - Set the OS to `Linux`.
    - Add your SSH key.
-   - Click "mount rescue and power cycle."
+   - Click "Activate rescue system"
 2. SSH into the console after reboot and run the script:
    ```bash
    ./hetzner-debian12-zfs-setup.sh
